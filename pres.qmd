@@ -1,0 +1,395 @@
+---
+title: "Using R to Automate Workflows for a Water Quality Management System"
+author: "Alex Manos, Pinellas County Division of Environmental Management"
+format:
+  revealjs:
+    transition: slide
+    theme: ["styles.scss"]
+    logo: www/pinellas_logo.png
+---
+
+
+
+## Agenda {.smaller}
+
+```{=html}
+<div class="overview-container">
+  <div class="overview-box" style="background-color: #d6eaf8;">
+    <h2>1</h2>
+    <h3>Sampling Program</h3>
+    <p>Overview of Pinellas County water quality sampling program design and implementation</p>
+  </div>
+  <div class="overview-box" style="background-color: #d4efdf;">
+    <h2>2</h2>
+    <h3>Open Source Tools</h3>
+    <p>Open-source tools used to automate processes for the water quality sampling program</p>
+  </div>
+  <div class="overview-box" style="background-color: #d5dbdb;">
+    <h2>3</h2>
+    <h3>Data <br> Products</h3>
+    <p>Publicly available tools and services developed to facilitated data sharing and transparecny</p>
+  </div>
+</div>
+```
+##  {background-color="#d6eaf8"}
+
+::: {style="font-size: 3em; text-align: center; margin-top: 30vh; font-weight:bold;"}
+Sampling Program
+:::
+
+## 
+
+![Tanim & Tobin 2018](www/county_map.png)
+
+
+
+## Water Quality Monitoring Program
+
+::: columns
+::: {.column width="50%"}
+-   Sampling divided into 2 parts:
+
+    -   Fixed Sites (streams)
+
+    -   Stratified random (lakes, coastal marine)
+
+\vspace{2em}
+
+-   8 sampling periods per year for wet/dry season coverage
+
+\vspace{2em}
+
+-   Nutrients, chl-a, water clarity, bacteria, in-situ
+
+\vspace{2em}
+
+- Sampling divided into "runs", each with tidally influenced streams
+:::
+
+::: {.column width="50%"}
+![](www/lr_sites.png){.absolute top="80" left="550" width="300" height="550"} 
+![](www/strata.png){.absolute top="80" left="850" width="375" height="540"}
+:::
+:::
+
+## Stream Sampling Date Selection
+
+-   Stream sites selected in advanced based on watershed coverage
+
+\vspace{2em}
+
+-   Daily tide heights checked at tidally influenced sites
+
+    -   Sampling dates selected based on optimal outgoing tide
+    -   Water quality should capture what's leaving the watershed
+
+
+![](www/tide.png){.absolute top="380" left="100" width="800" height="300"}
+
+## Stratified Random Sampling
+
+::: columns
+::: {.column width="60%"}
+-   Hexagonal grids overlayed on each stratum
+    -   Coastal waters and large lakes
+
+\vspace{2em}
+
+-   Random sites selected within each stratum to obtain 4 sample locations per stratum per period (32/year)
+
+\vspace{2em}
+
+- Captures water quality variability across large water bodies
+:::
+
+::: {.column width="40%"}
+![](www/hexs.png)
+:::
+:::
+
+
+## Sampling Plan -- Start to Finish
+
+```{=html}
+<div class="flowchart">
+  <div class="box fragment" data-fragment-index="1">Get sampling dates/locations</div>
+  <div class="arrow fragment" data-fragment-index="1">&#8681;</div>
+  <div class="box fragment" data-fragment-index="2">Request sampling bottles from county utilities laboratory</div>
+  <div class="arrow fragment" data-fragment-index="2">&#8681;</div>
+  <div class="box fragment" data-fragment-index="3">Conduct ambient water quality sampling</div>
+  <div class="arrow fragment" data-fragment-index="3">&#8681;</div>
+  <div class="box fragment" data-fragment-index="4">Compile data from all data sources</div>
+  <div class="arrow fragment" data-fragment-index="4">&#8681;</div>
+  <div class="box fragment" data-fragment-index="5">Perform QA/QC on all the data and make corrections when applicable</div>
+  <div class="arrow fragment" data-fragment-index="5">&#8681;</div>
+  <div class="box fragment" data-fragment-index="6">Upload data to FDEP WIN</div>
+  <div class="arrow fragment" data-fragment-index="6">&#8681;</div>
+  <div class="box fragment" data-fragment-index="7">Submit data to other partners (USF Water Atlas)</div>
+  <div class="arrow fragment" data-fragment-index="7">&#8681;</div>
+  <div class="box fragment" data-fragment-index="8">Conduct statistical analysis for trends, nutrient loading, etc.</div>
+</div>
+```
+## Goals for Automation
+
+::: columns
+::: {.column width="80%"}  
+::: {.fragment .fade-up fragment-index=1}
+1)  Use open source tools to automate as much of the sampling program as possible
+:::
+
+::: {.fragment .fade-up fragment-index=2}
+2)  Publish code and data for transparency and reproducibility
+:::
+
+<br>
+
+::: {.fragment .fade-in fragment-index=3}
+```{r,echo=TRUE}
+# Get landrun dates for each period and make sure no more than 2 of the same 
+# dates are selected:
+LRdate <- function(x){
+  s <- FALSE
+  while (!s){
+  y <- x |>
+    group_by(LR) |>
+    sample_n(1) |>
+    ungroup()
+  z <- unique((y |> add_count(Date))$n)
+  if (length(which(z > 2)) == 0) s <- TRUE
+ }
+  return(y)
+}
+```
+:::
+
+:::
+
+::: {.column width="20%"}
+::: {.fragment .fade-in fragment-index=3}
+![](www/R.png){.absolute width="250" height="230" top="40" left="780"}
+:::
+:::
+:::
+
+##  {background-color="#d4efdf"}
+
+::: {style="font-size: 3em; text-align: center; margin-top: 30vh; font-weight:bold"}
+Open Source Tools
+:::
+
+## Stream Sampling Dates
+
+::: columns
+::: {.column width="60%"}
+-   No previous automation
+
+\vspace{2em}
+
+-   Tide charts inspected for each site for optimal sampling dates
+
+\vspace{2em}
+
+-   `rtide` package used to automatically pull tidal height
+
+\vspace{2em}
+
+-   Algorithm developed to select optimal sampling dates based on time of outgoing tide
+
+:::
+
+::: {.column width="40%"}
+![](www/rtide.png)
+:::
+:::
+
+
+## Randomized Strata Sampling -- Old
+
+-   SAS code 20+ years old and divided into multiple files
+
+-   Only 1 license available within our group
+
+-   Limited staff knowledge of SAS
+
+![](www/strata_old.png){.absolute top="440" left="0" width="1000" height="150"}
+
+![](www/gpt.png){.absolute .fragment top="250" left="500" width="530" height="150"}
+
+## Randomized Strata Sampling -- New
+
+-   Old SAS code converted to R
+
+-   Code available to all staff to view, edit, run
+
+-   In-house expertise allows for customization
+
+-   Combined with stream date code to generate yearly sampling schedule for streamlined process
+
+![](www/strata_new.png){.absolute top="380" left="20" width="850" height="200"}
+
+## Sample Bottle Kits
+
+![](www/request.png){.absolute top="80" left="0" width="500" height="550"} ![](www/coc.png){.absolute top="75" left="500" width="600" height="550"}
+
+![](www/com.png){.absolute .fragment top="120" left="200" width="500" height="240"}
+
+## Data QA/QC Semi-Automation
+
+![](www/qaqc.png){.absolute top="80" left="200" width="750" height="500"}
+![](www/qcleft.png){.absolute top="200" left="50" width="130" height="180" .fragment}
+![](www/qcright.png){.absolute top="320" left="960" width="110" height="120" .fragment}
+
+
+## Data QA/QC Semi-Automation
+
+::: columns
+
+::: {.column width="70%"}
+
+::: {.fragment .semi-fade-out fragment-index=1}
+-   Previous automation processes were limited to HACH systems, all other QA/QC checks were done manually (Time/date, missing data)
+:::
+
+::: {.fragment .fade-in fragment-index=1}
+-   Current process performs all checks automatically and generates PDF report detailing each check conducted
+
+    -   Reproducible QA/QC
+    -   Provides digital paper trail
+:::
+
+::: {.fragment .fade-in fragment-index=3}
+-   Processing time before automation: `5-8 weeks`
+:::
+
+::: {.fragment .fade-in fragment-index=4}
+-   Processing time after automation: `2-4 weeks`
+:::
+:::
+
+::: {.column width="30%"}
+![](www/qaqc.png) 
+![](www/quarto.png){.fragment .fade-in fragment-index=2}
+:::
+:::
+
+## Improvements in Productivity
+
+::: columns
+::: {.column style="width=50%; font-size: 0.8em;"}
+-   Open-source tools provide benefits to all aspect of sampling program:
+
+    -   Faster processing time
+    -   Less chance for human error
+    -   Increased data reliability
+    -   Faster output of trends and other data products
+
+<br>
+
+-   Staff have more time to focus on other projects
+:::
+
+::: {.column style="width=50%; font-size: 0.7em;" .fragment .absolute top="100" left="600"}
+|        Task        |  Annual Time  |
+|:------------------:|:-------------:|
+|   Sampling Dates   |   20 hours    |
+| Bottle Kit Request |    8 hours    |
+|     Data QA/QC     |   160 hours   |
+| Reformatting Data  |   20 hours    |
+|     **Total**      | **208 hours** |
+
+: Without Automation
+
+<br>
+
+|        Task        | Annual Time  |
+|:------------------:|:------------:|
+|   Sampling Dates   |   4 hours    |
+| Bottle Kit Request |  8 minutes   |
+|     Data QA/QC     |   24 hours   |
+| Reformatting Data  |   2 hours    |
+|     **Total**      | **30 hours** |
+
+: With Automation
+:::
+:::
+
+##  {background-color="#d5dbdb"}
+
+::: {style="font-size: 3em; text-align: center; margin-top: 30vh; font-weight:bold"}
+Data Products
+:::
+
+## Faster Data Updates
+
+-   Many data partners with the county
+
+    -   USF Water Atlas updates
+    -   FDEP WIN
+    -   Local municipalities
+
+
+![](www/atlas.png){.absolute top="100" left="550" width="500" height="350"}
+![](www/dep.png){.absolute left="100" top="350" width="300" height="300"}
+
+
+## Water Quality Dashboard 
+
+[https://pcdem.shinyapps.io/dashboard/](https://pcdem.shinyapps.io/dashboard/)
+
+::: {.absolute top="132"}
+```{r}
+knitr::include_app("https://pcdem.shinyapps.io/dashboard_demo", height = "600px")
+```
+:::
+
+![](www/rmd.png){.absolute top="100" left="965" width="120" height="130"}
+![](www/shiny.png){.absolute top="230" left="965" width="120" height="130"}
+
+
+
+
+## Keeping an Open Mind
+
+::: columns
+::: {.column width="60%"}
+-   Development of division Github account to provide public access to:
+
+    -   Code
+    -   Datasets
+    -   GIS files
+
+\vspace{2em}
+
+-   Future efforts:
+
+    -   Provide public access to more of DEM data
+    -   Create more applications for public use
+    -   Package development?
+:::
+
+::: {.column width="40%"}
+![](www/github.png){.absolute left="600" width="500" height="220"}
+:::
+:::
+
+## Thank you!
+
+::: columns
+::: column
+<br>
+
+{{< fa file-powerpoint >}} [rpubs.com/aman11/NMC_2025](https://rpubs.com/aman11/NMC_2025)
+
+{{< fa brands github >}} [PCDEM/NMC_2025](https://github.com/PCDEM/NMC_2025)
+
+{{< fa brands linkedin >}} [alex-manos](https://www.linkedin.com/in/alex-manos-228115113/)
+
+{{< fa envelope >}} [almanos\@pinellas.gov](mailto:almanos@pinellas.gov)
+
+
+:::
+
+::: column
+![Presentation Slides](www/qr.png)
+:::
+:::
